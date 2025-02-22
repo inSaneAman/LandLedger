@@ -2,12 +2,12 @@ import "./App.css";
 
 import { Route, Routes } from "react-router-dom";
 
-import LandingPage from "../src/pages/landingPage";
+import FirstSlide from "./pages/firstSlide";
 function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<LandingPage />}></Route>
+        <Route path="/" element={<FirstSlide />}></Route>
       </Routes>
     </>
   );

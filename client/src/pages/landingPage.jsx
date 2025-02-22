@@ -18,11 +18,7 @@ function LandingPage() {
             <span className="text-[#BA6168]">Land Registry</span> Through{" "}
             <span className="text-[#BA6168]">Blockchain</span>
           </h1>
-          <img
-            src={Wave}
-            alt="Wave"
-            className="py-7 max-w-fit"
-          />
+          <img src={Wave} alt="Wave" className="py-7 max-w-fit" />
           <p className="text-md font-inter pt-7 line-clamp-6 text-left w-3/4">
             Experience the Future of Property Buying, Selling and Investing &
             Navigate the New Era of Digital Property Transactions with Ease and
