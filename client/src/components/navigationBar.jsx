@@ -41,12 +41,10 @@ function NavigationBar() {
       </div>
 
       <div className="flex items-center gap-x-4 relative z-10">
-        {/* Search Button */}
         <Link className="p-2 rounded-full hover:bg-white/10 transition duration-300">
           <TfiSearch className="text-white text-2xl" />
         </Link>
 
-        {/* Login Button */}
         <Link
           to="/auth"
           className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
