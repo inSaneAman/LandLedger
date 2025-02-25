@@ -1,8 +1,8 @@
 const PropertyData = [
   {
     id: 1,
-    lat: 21.4669,
-    long: 83.9812,
+    lat: 26.9124,
+    long: 75.7873,
     price: 300,
     builders: "Tata Projects",
     builderLogoUrl:
@@ -12,8 +12,8 @@ const PropertyData = [
   },
   {
     id: 2,
-    lat: 28.7041,
-    long: 77.1025,
+    lat: 22.5726,
+    long: 88.3639,
     price: 450,
     builders: "DLF Limited",
     builderLogoUrl:
@@ -23,8 +23,8 @@ const PropertyData = [
   },
   {
     id: 3,
-    lat: 19.076,
-    long: 72.8777,
+    lat: 15.2993,
+    long: 74.124,
     price: 520,
     builders: "Lodha Group",
     builderLogoUrl:
@@ -34,8 +34,8 @@ const PropertyData = [
   },
   {
     id: 4,
-    lat: 12.9716,
-    long: 77.5946,
+    lat: 21.1702,
+    long: 72.8311,
     price: 600,
     builders: "Brigade Group",
     builderLogoUrl:
@@ -43,6 +43,7 @@ const PropertyData = [
     owner: "Elite Spaces",
     propertyType: "Commercial",
   },
+
   {
     id: 5,
     lat: 13.0827,
