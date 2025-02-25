@@ -1,6 +1,7 @@
-import { motion } from "framer-motion";
-import {  useState } from "react";
+import { motion, useAnimation } from "framer-motion";
+import { useEffect, useState } from "react";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { useInView } from "react-intersection-observer";
 
 import BackgroundEffects from "../components/backgroundEffects";
 import Card from "../components/card";
@@ -8,7 +9,7 @@ import PropertyData from "../helpers/propertyData";
 
 function Listings() {
   const [scrollIndex, setScrollIndex] = useState(0);
-  const visibleCards = 3; 
+  const visibleCards = 3;
 
   const handleScroll = (direction) => {
     const maxIndex = PropertyData.length - visibleCards;
@@ -18,12 +19,35 @@ function Listings() {
     });
   };
 
+  const controls = useAnimation();
+  const { ref, inView } = useInView({
+    triggerOnce: false,
+    threshold: 0.2, 
+  });
+
+  useEffect(() => {
+    if (inView) {
+      controls.start("visible");
+    } else {
+      controls.start("hidden");
+    }
+  }, [controls, inView]);
 
   return (
-    <div className="relative bg-black min-h-screen flex flex-col items-center justify-start overflow-hidden pt-10">
+    <div
+      ref={ref}
+      className="relative bg-black min-h-screen flex flex-col items-center justify-start overflow-hidden pt-10"
+    >
       <BackgroundEffects />
 
-      <h1 className="text-white text-5xl mb-20 font-clash-display">Featured Listings</h1>
+      <motion.h1
+        className="text-white text-5xl mb-20 font-clash-display"
+        initial={{ opacity: 0, y: 50 }}
+        animate={controls}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        Featured Listings
+      </motion.h1>
 
       <div className="relative w-[90%] flex items-center justify-center">
         <button
@@ -39,10 +63,27 @@ function Listings() {
             animate={{ x: `-${scrollIndex * 50}%` }}
             transition={{ ease: "easeInOut", duration: 0.8 }}
           >
-            {PropertyData.map((property) => (
-              <div key={property.id} className="w-[25%] flex-shrink-0">
+            {PropertyData.map((property, index) => (
+              <motion.div
+                key={property.id}
+                className="w-[25%] flex-shrink-0"
+                initial="hidden"
+                animate={controls}
+                variants={{
+                  hidden: { opacity: 0, y: 50 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: 0.6,
+                      ease: "easeOut",
+                      delay: index * 0.2,
+                    },
+                  },
+                }}
+              >
                 <Card property={property} />
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </div>
