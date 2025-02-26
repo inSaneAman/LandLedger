@@ -1,6 +1,7 @@
 import HowItWorks from "./HowItWorks";
 import LandingPage from "./landingPage";
 import Listings from "./listings";
+import OurFeatures from "./ourFeatures";
 import WhyChooseUs from "./whyChooseUs";
 
 function FirstSlide() {
@@ -10,6 +11,7 @@ function FirstSlide() {
       <WhyChooseUs />
       <Listings />
       <HowItWorks/>
+      <OurFeatures/>
     </div>
   );
 }

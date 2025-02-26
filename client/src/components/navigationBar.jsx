@@ -5,9 +5,9 @@ import { Link } from "react-router-dom";
 function NavigationBar() {
   const { scrollYProgress } = useScroll();
 
-  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const blur = useTransform(scrollYProgress, [0, 0.8], ["0px", "8px"]);
-  const translateY = useTransform(scrollYProgress, [0, 0.8], [0, -50]);
+  const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
+  const blur = useTransform(scrollYProgress, [0, 0.1], ["0px", "8px"]);
+  const translateY = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
 
   return (
     <motion.div
