@@ -1,3 +1,4 @@
+import Footer from "./footer";
 import HowItWorks from "./HowItWorks";
 import LandingPage from "./landingPage";
 import Listings from "./listings";
@@ -10,8 +11,9 @@ function FirstSlide() {
       <LandingPage />
       <WhyChooseUs />
       <Listings />
-      <HowItWorks/>
-      <OurFeatures/>
+      <HowItWorks />
+      <OurFeatures />
+      <Footer />
     </div>
   );
 }
