@@ -26,7 +26,7 @@ function LandingPage() {
           </p>
           <div className="grid grid-cols-2  items-center pt-7">
             <div className="flex ">
-              <button className="bg-[#BA6168] text-black px-6 py-3 rounded-3xl text-center hover:bg-white/80 transition-all ease-in-out">
+              <button className="bg-[#BA6168] text-white border border-white px-6 py-3 rounded-3xl text-center hover:bg-transparent transition-all ease-in-out">
                 <Link to="/discover">Start Your Investment Journey</Link>
               </button>
             </div>
@@ -34,8 +34,7 @@ function LandingPage() {
               <Link className="flex items-center gap-3 p-3">
                 Explore Properties
                 <span>
-                  <FaArrowRight className="text-2xl" />{" "}
-                  {/* Increased arrow size */}
+                  <FaArrowRight className="text-2xl text-thin" />{" "}
                 </span>
               </Link>
             </div>
