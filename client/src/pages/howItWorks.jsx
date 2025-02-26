@@ -10,7 +10,6 @@ function HowItWorks() {
     <div className="relative bg-black text-white min-h-screen flex flex-col items-center">
       <BackgroundEffects />
 
-      {/* Title and Description */}
       <div className="text-center p-10">
         <h1 className="font-clash-display font-bold text-3xl">
           How the Exchange Works
@@ -21,7 +20,6 @@ function HowItWorks() {
         </p>
       </div>
 
-      {/* Workflow Container - Zigzag Pattern */}
       <div className="relative flex flex-col items-center w-full max-w-6xl space-y-16">
         {workFlow.map((workflow, index) => (
           <motion.div
@@ -34,21 +32,19 @@ function HowItWorks() {
             transition={{
               duration: 0.8,
               ease: "easeOut",
-              delay: index * 0.2, // Staggered animation
+              delay: index * 0.2,
             }}
-            viewport={{ once: true, amount: 0.2 }} // Trigger when 20% in view
+            viewport={{ once: true, amount: 0.2 }}
           >
-            {/* Animated Card */}
             <WorkingCard workflow={workflow} />
 
-            {/* Animated Arrow Down (Only if it's not the last item) */}
             {index !== workFlow.length - 1 && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{
                   duration: 0.6,
-                  delay: index * 0.2 + 0.3, // Slight delay for arrows
+                  delay: index * 0.2 + 0.3,
                 }}
                 viewport={{ once: true, amount: 0.2 }}
                 className="absolute bottom-[-40px] flex justify-center w-full text-[#BA6168] text-2xl"
