@@ -22,7 +22,7 @@ function Listings() {
   const controls = useAnimation();
   const { ref, inView } = useInView({
     triggerOnce: false,
-    threshold: 0.2, 
+    threshold: 0.2,
   });
 
   useEffect(() => {
@@ -39,15 +39,15 @@ function Listings() {
       className="relative bg-black min-h-screen flex flex-col items-center justify-start overflow-hidden pt-10"
     >
       <BackgroundEffects />
+      <div className="text-center p-10">
+        <h1 className="font-clash-display font-bold text-3xl">
+          Featured Listings{" "}
+        </h1>
+        <p className="font-inter font-extralight text-sm max-w-sm mt-3">
+          Below are some featured property listings.
+        </p>
+      </div>
 
-      <motion.h1
-        className="text-white text-5xl mb-20 font-clash-display"
-        initial={{ opacity: 0, y: 50 }}
-        animate={controls}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-      >
-        Featured Listings
-      </motion.h1>
 
       <div className="relative w-[90%] flex items-center justify-center">
         <button

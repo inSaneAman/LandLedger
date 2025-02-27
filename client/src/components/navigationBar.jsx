@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { TfiSearch } from "react-icons/tfi";
-import { Link } from "react-router-dom";
+import { Link as ScrollLink } from "react-scroll";
 
 function NavigationBar() {
   const { scrollYProgress } = useScroll();
@@ -19,54 +19,61 @@ function NavigationBar() {
         y: translateY,
       }}
     >
-      {/* Left Section */}
       <div className="flex items-center gap-x-12">
-        <Link
-          to="/"
-          className="font-clash-display text-[#BA6168] font-bold text-3xl"
+        <ScrollLink
+          to="home"
+          smooth={true}
+          duration={500}
+          className="font-clash-display text-[#BA6168] font-bold text-3xl cursor-pointer"
         >
           LAND Ledger
-        </Link>
+        </ScrollLink>
 
         <ul className="flex gap-x-12 text-white text-lg font-inter">
           <li>
-            <Link
-              to="/discover"
-              className="font-light hover:text-[#BA6168] transition duration-300"
+            <ScrollLink
+              to="why-choose-us"
+              smooth={true}
+              duration={500}
+              offset={-80}
+              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
             >
-              Discover
-            </Link>
+              Why Choose Us
+            </ScrollLink>
           </li>
           <li>
-            <Link
-              to="/marketplace"
-              className="font-light hover:text-[#BA6168] transition duration-300"
+            <ScrollLink
+              to="listings"
+              smooth={true}
+              duration={500}
+              offset={-80}
+              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
             >
-              Marketplace
-            </Link>
+              Listings
+            </ScrollLink>
           </li>
           <li>
-            <Link
-              to="/how-it-works"
-              className="font-light hover:text-[#BA6168] transition duration-300"
+            <ScrollLink
+              to="how-it-works"
+              smooth={true}
+              duration={500}
+              offset={-80}
+              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
             >
               How it Works
-            </Link>
+            </ScrollLink>
           </li>
         </ul>
       </div>
 
       <div className="flex items-center gap-x-6">
-        <Link className="p-2 rounded-full hover:bg-white/10 transition duration-300">
+        <button className="p-2 rounded-full hover:bg-white/10 transition duration-300">
           <TfiSearch className="text-white text-2xl" />
-        </Link>
+        </button>
 
-        <Link
-          to="/auth"
-          className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
-        >
+        <button className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300">
           Connect Wallet
-        </Link>
+        </button>
       </div>
     </motion.div>
   );

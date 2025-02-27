@@ -48,7 +48,7 @@ function WhyChooseUs() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            <Link to="/sell">Sell Property</Link>
+            <Link to="/auth">Sell Property</Link>
           </motion.button>
         </motion.div>
       </div>

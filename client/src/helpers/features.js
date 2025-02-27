@@ -21,7 +21,7 @@ const features = [
       },
     ],
     button: "List Property Now",
-    linkTo: "/sellProperty",
+    linkTo: "/auth",
     imgSrc: feature1,
   },
   {
