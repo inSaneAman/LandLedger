@@ -1,13 +1,82 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { TfiSearch } from "react-icons/tfi";
 import { Link as ScrollLink } from "react-scroll";
+import { useState, useEffect } from "react";
+import { connectWallet, getStoredWalletAddress, setupWalletListeners, disconnectWallet } from "../utils/web3";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 function NavigationBar() {
   const { scrollYProgress } = useScroll();
+  const [walletAddress, setWalletAddress] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const navigate = useNavigate();
 
   const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
   const blur = useTransform(scrollYProgress, [0, 0.1], ["0px", "8px"]);
   const translateY = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
+
+  useEffect(() => {
+    // Check for stored wallet address on component mount
+    const storedAddress = getStoredWalletAddress();
+    if (storedAddress) {
+      setWalletAddress(storedAddress);
+    }
+
+    // Setup wallet event listeners
+    setupWalletListeners(
+      (address) => setWalletAddress(address),
+      () => window.location.reload()
+    );
+  }, []);
+
+  const handleConnectWallet = async () => {
+    try {
+      setIsConnecting(true);
+      const walletData = await connectWallet();
+      setWalletAddress(walletData.address);
+      toast.success("Wallet connected successfully!");
+    } catch (error) {
+      console.error("Failed to connect wallet:", error);
+      if (error.message === 'Please install MetaMask to use this feature') {
+        toast.error("Please install MetaMask to connect your wallet");
+      } else {
+        toast.error("Failed to connect wallet. Please try again.");
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        // Request account access to open MetaMask
+        await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+      }
+      disconnectWallet();
+      setWalletAddress("");
+      toast.success("Wallet disconnected successfully!");
+    } catch (error) {
+      console.error("Error during disconnect:", error);
+      toast.error("Failed to disconnect wallet. Please try again.");
+    }
+  };
+
+  const handleAddProperty = () => {
+    if (!walletAddress) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    navigate("/add-property");
+  };
+
+  const formatAddress = (address) => {
+    if (!address) return "";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   return (
     <motion.div
@@ -71,9 +140,33 @@ function NavigationBar() {
           <TfiSearch className="text-white text-2xl" />
         </button>
 
-        <button className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300">
-          Connect Wallet
-        </button>
+        {walletAddress ? (
+          <div className="flex items-center gap-x-4">
+            <button 
+              onClick={handleAddProperty}
+              className="bg-[#BA6168] text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#a54f56] transition ease-in-out duration-300"
+            >
+              Add Property
+            </button>
+            <span className="text-white font-medium">
+              {formatAddress(walletAddress)}
+            </span>
+            <button 
+              onClick={handleDisconnectWallet}
+              className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={handleConnectWallet}
+            disabled={isConnecting}
+            className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isConnecting ? "Connecting..." : "Connect Wallet"}
+          </button>
+        )}
       </div>
     </motion.div>
   );
