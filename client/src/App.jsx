@@ -7,6 +7,7 @@ import OurFeatures from "./pages/OurFeatures";
 import WhyChooseUs from "./pages/WhyChooseUs";
 import AddProperty from "./pages/AddProperty";
 import Login from "./components/auth/Login";
+import LandRegister from "./components/LandRegister";
 import { Routes, Route } from "react-router-dom";
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
         } />
         <Route path="/add-property" element={<AddProperty />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/land-register" element={<LandRegister />} />
       </Routes>
     </div>
   );

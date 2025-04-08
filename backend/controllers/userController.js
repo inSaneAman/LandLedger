@@ -213,26 +213,10 @@ const updateWalletAddress = async (req, res) => {
     }
 };
 
-// @desc    Get user role by wallet address
-// @route   GET /api/users/role/:walletAddress
-// @access  Public
-const getUserRole = async (req, res) => {
-    try {
-        const user = await User.findOne({ walletAddress: req.params.walletAddress });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.json({ role: user.role });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 module.exports = {
     loginUser,
     registerUser,
     getUserProfile,
     updateUserRole,
-    updateWalletAddress,
-    getUserRole
+    updateWalletAddress
 }; 

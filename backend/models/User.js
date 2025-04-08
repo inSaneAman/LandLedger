@@ -20,10 +20,6 @@ const userSchema = new mongoose.Schema({
         },
         default: null
     },
-    assignedProperties: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Property'
-    }],
     // Fields specific to sellers
     properties: [{
         type: mongoose.Schema.Types.ObjectId,

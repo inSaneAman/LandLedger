@@ -6,14 +6,6 @@ const propertySchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    ownerWalletAddress: {
-        type: String,
-        required: true
-    },
-    landName: {
-        type: String,
-        required: true
-    },
     title: {
         type: String,
         required: true
@@ -34,16 +26,6 @@ const propertySchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    image: {
-        url: {
-            type: String,
-            required: true
-        },
-        publicId: {
-            type: String,
-            required: true
-        }
-    },
     documents: [{
         name: String,
         url: String,
@@ -56,10 +38,6 @@ const propertySchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'verified', 'rejected'],
         default: 'pending'
-    },
-    verifiedByInspector: {
-        type: Boolean,
-        default: false
     },
     inspector: {
         type: mongoose.Schema.Types.ObjectId,

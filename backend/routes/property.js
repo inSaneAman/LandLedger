@@ -1,19 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { protect, isInspector } = require('../middleware/auth');
-const { upload } = require('../config/cloudinary');
 const {
     submitProperty,
     getInspectorProperties,
     verifyProperty,
-    getUserProperties
+    getUserProperties,
+    getInspectorPropertiesByWallet,
+    updateInspectionStatus
 } = require('../controllers/propertyController');
 
-// Property submission route with file upload
-router.post('/', protect, upload.single('image'), submitProperty);
+// Property submission route
+router.post('/', protect, submitProperty);
 
 // Get inspector's assigned properties
 router.get('/inspector', protect, isInspector, getInspectorProperties);
+
+// Get inspector's properties by wallet address
+router.get('/inspector/:walletAddress', getInspectorPropertiesByWallet);
+
+// Update property inspection status
+router.put('/:id/inspection-status', updateInspectionStatus);
 
 // Verify a property
 router.put('/:id/verify', protect, isInspector, verifyProperty);

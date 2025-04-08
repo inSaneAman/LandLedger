@@ -171,9 +171,91 @@ const getUserProperties = async (req, res) => {
     }
 };
 
+// @desc    Get all properties for an inspector by wallet address
+// @route   GET /api/properties/inspector/:walletAddress
+// @access  Public
+const getInspectorPropertiesByWallet = async (req, res) => {
+    try {
+        const { walletAddress } = req.params;
+        
+        // Find inspector by wallet address
+        const inspector = await User.findOne({ 
+            walletAddress,
+            role: 'inspector'
+        });
+
+        if (!inspector) {
+            return res.status(404).json({ message: 'Inspector not found' });
+        }
+
+        // Get all properties assigned to this inspector
+        const properties = await Property.find({ inspector: inspector._id })
+            .populate('owner', 'walletAddress')
+            .sort({ createdAt: -1 });
+
+        res.json(properties);
+    } catch (error) {
+        console.error('Error getting inspector properties:', error);
+        res.status(500).json({ 
+            message: error.message || 'Error getting inspector properties',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
+// @desc    Update property inspection status
+// @route   PUT /api/properties/:id/inspection-status
+// @access  Public
+const updateInspectionStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, inspectedAt, inspectorWallet } = req.body;
+
+        // Find the property
+        const property = await Property.findById(id);
+        if (!property) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+
+        // Find inspector by wallet address
+        const inspector = await User.findOne({ 
+            walletAddress: inspectorWallet,
+            role: 'inspector'
+        });
+
+        if (!inspector) {
+            return res.status(404).json({ message: 'Inspector not found' });
+        }
+
+        // Verify this inspector is assigned to this property
+        if (property.inspector.toString() !== inspector._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to update this property' });
+        }
+
+        // Update property status and verification details
+        property.status = status;
+        property.verificationDate = inspectedAt;
+        property.verifiedByInspector = true;
+        property.updatedAt = new Date();
+
+        // Save the updated property
+        const updatedProperty = await property.save();
+
+        res.json(updatedProperty);
+    } catch (error) {
+        console.error('Error updating inspection status:', error);
+        res.status(500).json({ 
+            message: error.message || 'Error updating inspection status',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
 module.exports = {
     submitProperty,
     getInspectorProperties,
     verifyProperty,
-    getUserProperties
+    getUserProperties,
+    getInspectorPropertiesByWallet,
+    updateInspectionStatus
 }; 
