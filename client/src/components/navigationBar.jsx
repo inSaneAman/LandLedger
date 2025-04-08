@@ -3,12 +3,14 @@ import { TfiSearch } from "react-icons/tfi";
 import { Link as ScrollLink } from "react-scroll";
 import { useState, useEffect } from "react";
 import { connectWallet, getStoredWalletAddress, setupWalletListeners, disconnectWallet } from "../utils/web3";
+import { getUserRole } from "../utils/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 function NavigationBar() {
   const { scrollYProgress } = useScroll();
   const [walletAddress, setWalletAddress] = useState("");
+  const [userRole, setUserRole] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const navigate = useNavigate();
 
@@ -21,14 +23,28 @@ function NavigationBar() {
     const storedAddress = getStoredWalletAddress();
     if (storedAddress) {
       setWalletAddress(storedAddress);
+      checkUserRole(storedAddress);
     }
 
     // Setup wallet event listeners
     setupWalletListeners(
-      (address) => setWalletAddress(address),
+      (address) => {
+        setWalletAddress(address);
+        checkUserRole(address);
+      },
       () => window.location.reload()
     );
   }, []);
+
+  const checkUserRole = async (address) => {
+    try {
+      const role = await getUserRole(address);
+      setUserRole(role);
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      setUserRole(null);
+    }
+  };
 
   const handleConnectWallet = async () => {
     try {
@@ -98,41 +114,32 @@ function NavigationBar() {
           LAND Ledger
         </ScrollLink>
 
-        <ul className="flex gap-x-12 text-white text-lg font-inter">
-          <li>
-            <ScrollLink
-              to="why-choose-us"
-              smooth={true}
-              duration={500}
-              offset={-80}
-              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
-            >
-              Why Choose Us
-            </ScrollLink>
-          </li>
-          <li>
-            <ScrollLink
-              to="listings"
-              smooth={true}
-              duration={500}
-              offset={-80}
-              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
-            >
-              Listings
-            </ScrollLink>
-          </li>
-          <li>
-            <ScrollLink
-              to="how-it-works"
-              smooth={true}
-              duration={500}
-              offset={-80}
-              className="font-light hover:text-[#BA6168] transition duration-300 cursor-pointer"
-            >
-              How it Works
-            </ScrollLink>
-          </li>
-        </ul>
+        <div className="flex items-center gap-x-8">
+          <ScrollLink
+            to="properties"
+            smooth={true}
+            duration={500}
+            className="text-gray-700 hover:text-[#BA6168] cursor-pointer"
+          >
+            Properties
+          </ScrollLink>
+          <ScrollLink
+            to="about"
+            smooth={true}
+            duration={500}
+            className="text-gray-700 hover:text-[#BA6168] cursor-pointer"
+          >
+            About
+          </ScrollLink>
+          <ScrollLink
+            to="contact"
+            smooth={true}
+            duration={500}
+            className="text-gray-700 hover:text-[#BA6168] cursor-pointer"
+          >
+            Contact
+          </ScrollLink>
+        </div>
       </div>
 
       <div className="flex items-center gap-x-6">
@@ -141,28 +148,33 @@ function NavigationBar() {
         </button>
 
         {walletAddress ? (
-          <div className="flex items-center gap-x-4">
-            <button 
+          <>
+            <button
               onClick={handleAddProperty}
-              className="bg-[#BA6168] text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#a54f56] transition ease-in-out duration-300"
+              className="bg-[#BA6168] text-white px-6 py-2 rounded-lg hover:bg-[#A55158] transition-colors"
             >
               Add Property
             </button>
-            <span className="text-white font-medium">
-              {formatAddress(walletAddress)}
-            </span>
-            <button 
+            {userRole === 'inspector' && (
+              <button
+                onClick={() => navigate('/verify-properties')}
+                className="bg-[#BA6168] text-white px-6 py-2 rounded-lg hover:bg-[#A55158] transition-colors"
+              >
+                Verify Properties
+              </button>
+            )}
+            <button
               onClick={handleDisconnectWallet}
-              className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+              className="text-gray-700 hover:text-[#BA6168] transition-colors"
             >
-              Disconnect
+              {formatAddress(walletAddress)}
             </button>
-          </div>
+          </>
         ) : (
-          <button 
+          <button
             onClick={handleConnectWallet}
             disabled={isConnecting}
-            className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[#BA6168] text-white px-6 py-2 rounded-lg hover:bg-[#A55158] transition-colors disabled:opacity-50"
           >
             {isConnecting ? "Connecting..." : "Connect Wallet"}
           </button>

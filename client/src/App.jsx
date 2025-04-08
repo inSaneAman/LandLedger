@@ -6,6 +6,7 @@ import Listings from "./pages/Listings";
 import OurFeatures from "./pages/OurFeatures";
 import WhyChooseUs from "./pages/WhyChooseUs";
 import AddProperty from "./pages/AddProperty";
+import Login from "./components/auth/Login";
 import { Routes, Route } from "react-router-dom";
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           </>
         } />
         <Route path="/add-property" element={<AddProperty />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </div>
   );

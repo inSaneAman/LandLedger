@@ -5,6 +5,7 @@ import { addLand } from "../utils/landContract";
 import { testContractConnection, testAddLand } from "../utils/testContract";
 import toast from "react-hot-toast";
 import { ethers } from "ethers";
+import axios from "axios";
 
 function AddProperty() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ function AddProperty() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
+    landName: "",
     landId: "",
     location: "",
     area: "",
@@ -47,7 +49,7 @@ function AddProperty() {
     e.preventDefault();
     
     // Validate form
-    if (!formData.landId || !formData.location || !formData.area || 
+    if (!formData.landName || !formData.landId || !formData.location || !formData.area || 
         !formData.documentHash || !formData.price || !formData.description) {
       toast.error("Please fill in all fields");
       return;
@@ -69,12 +71,30 @@ function AddProperty() {
         return;
       }
 
-      // Update owner name with connected wallet address
-      setFormData(prev => ({
-        ...prev,
-        ownerName: walletAddress
-      }));
+      // Create FormData for image upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('image', selectedImage);
+      formDataToSend.append('landName', formData.landName);
+      formDataToSend.append('title', formData.landId);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('location', formData.location);
+      formDataToSend.append('size', formData.area);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('ownerWalletAddress', walletAddress);
+      formDataToSend.append('documents', JSON.stringify([{
+        name: 'Document Hash',
+        url: formData.documentHash
+      }]));
       
+
+      // Upload to backend
+      const response = await axios.post('http://localhost:5000/api/properties', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+console.log(response)
       // Get the signer from the connected wallet
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
@@ -95,6 +115,8 @@ function AddProperty() {
       console.error("Error adding property:", error);
       if (error.code === 4001) {
         toast.error("Transaction rejected by user");
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
       } else {
         toast.error("Failed to add property. Please try again.");
       }
@@ -147,75 +169,85 @@ function AddProperty() {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6 bg-white/10 p-8 rounded-xl backdrop-blur-xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Land ID</label>
-              <input
-                type="text"
-                name="landId"
-                value={formData.landId}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
-                placeholder="Enter land ID"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Location</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
-                placeholder="Enter location"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Area (in sq ft)</label>
+          <div>
+            <label className="block text-sm font-medium mb-2">Land Name</label>
+            <input
+              type="text"
+              name="landName"
+              value={formData.landName}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
+              placeholder="Enter land name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Land ID</label>
+            <input
+              type="text"
+              name="landId"
+              value={formData.landId}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
+              placeholder="Enter land ID"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Location</label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
+              placeholder="Enter location"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Area (in sq ft)</label>
+            <input
+              type="number"
+              name="area"
+              value={formData.area}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
+              placeholder="Enter area"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Document Hash</label>
+            <input
+              type="text"
+              name="documentHash"
+              value={formData.documentHash}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
+              placeholder="Enter document hash"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Price (in ETH)</label>
+            <div className="relative">
               <input
                 type="number"
-                name="area"
-                value={formData.area}
+                name="price"
+                value={formData.price}
                 onChange={handleChange}
+                step="0.000000000000000001"
                 className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
-                placeholder="Enter area"
+                placeholder="Enter price"
               />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Document Hash</label>
-              <input
-                type="text"
-                name="documentHash"
-                value={formData.documentHash}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
-                placeholder="Enter document hash"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-2">Price (in ETH)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  step="0.000000000000000001"
-                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 focus:border-[#BA6168] focus:outline-none"
-                  placeholder="Enter price"
-                />
-                <div className="absolute right-2 top-2 text-sm text-gray-400">
-                  ETH
-                </div>
+              <div className="absolute right-2 top-2 text-sm text-gray-400">
+                ETH
               </div>
-              <p className="mt-1 text-xs text-gray-400">
-                Will be converted to Wei automatically
-              </p>
             </div>
+            <p className="mt-1 text-xs text-gray-400">
+              Will be converted to Wei automatically
+            </p>
           </div>
 
           <div className="mt-6">
