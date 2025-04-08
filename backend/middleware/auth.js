@@ -9,6 +9,16 @@ const protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = await User.findById(decoded.id).select('-password');
+            
+            if (!req.user) {
+                return res.status(401).json({ message: 'User not found' });
+            }
+
+            // Check if wallet is connected
+            if (req.headers.walletaddress && req.user.walletAddress !== req.headers.walletaddress) {
+                return res.status(401).json({ message: 'Wallet address mismatch' });
+            }
+
             next();
         } catch (error) {
             res.status(401).json({ message: 'Not authorized, token failed' });
@@ -20,6 +30,22 @@ const protect = async (req, res, next) => {
     }
 };
 
+const isBuyer = (req, res, next) => {
+    if (req.user && req.user.role === 'buyer') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Not authorized as a buyer' });
+    }
+};
+
+const isSeller = (req, res, next) => {
+    if (req.user && req.user.role === 'seller') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Not authorized as a seller' });
+    }
+};
+
 const isInspector = (req, res, next) => {
     if (req.user && req.user.role === 'inspector') {
         next();
@@ -28,12 +54,4 @@ const isInspector = (req, res, next) => {
     }
 };
 
-const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({ message: 'Not authorized as an admin' });
-    }
-};
-
-module.exports = { protect, isInspector, isAdmin }; 
+module.exports = { protect, isBuyer, isSeller, isInspector }; 

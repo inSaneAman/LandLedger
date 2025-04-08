@@ -5,13 +5,15 @@ const {
     registerUser,
     getUserProfile,
     updateUserRole,
-    updateWalletAddress
+    updateWalletAddress,
+    checkWalletExists
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public routes
 router.post('/login', loginUser);
 router.post('/register', registerUser);
+router.get('/wallet/:address', checkWalletExists);
 
 // Protected routes
 router.get('/profile', protect, getUserProfile);

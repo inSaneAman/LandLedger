@@ -10,7 +10,7 @@ function Footer() {
 
       <div className="flex flex-col items-center text-center py-16 border-t border-gray-500">
         <h1 className="font-bold font-clash-display text-3xl md:text-4xl max-w-2xl">
-          Don’t miss out on the real estate evolution. Join us now.
+          Don't miss out on the real estate evolution. Join us now.
         </h1>
         <button className="mt-6 bg-[#BA6168] border border-white rounded-3xl px-6 py-3 hover:bg-transparent transition-all ease-in-out duration-300">
           <Link to="/auth">Join Now</Link>

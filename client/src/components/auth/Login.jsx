@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import BackgroundEffects from '../backgroundEffects';
+import toast from 'react-hot-toast';
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [formData, setFormData] = useState({
         role: '',
-        walletAddress: '',
+        walletAddress: location.state?.walletAddress || '',
         areaOfInspection: ''
     });
     const [error, setError] = useState('');
@@ -16,11 +18,32 @@ const Login = () => {
     const [isMetaMaskInstalled, setIsMetaMaskInstalled] = useState(false);
     const [connectingWallet, setConnectingWallet] = useState(false);
     const [showRoleSelection, setShowRoleSelection] = useState(false);
+    const [isNewUser, setIsNewUser] = useState(location.state?.isNewUser || false);
 
     useEffect(() => {
         // Check if MetaMask is installed
         setIsMetaMaskInstalled(!!window.ethereum);
     }, []);
+
+    useEffect(() => {
+        if (formData.walletAddress) {
+            checkExistingUser();
+        }
+    }, [formData.walletAddress]);
+
+    const checkExistingUser = async () => {
+        try {
+            const response = await axios.get(`http://localhost:5000/api/users/wallet/${formData.walletAddress}`);
+            if (response.data) {
+                // User exists, log them in
+                handleLogin();
+            }
+        } catch (error) {
+            if (error.response?.status === 404) {
+                setIsNewUser(true);
+            }
+        }
+    };
 
     const handleInputChange = (e) => {
         setFormData({
@@ -80,13 +103,11 @@ const Login = () => {
             setLoading(true);
             setError('');
 
-            // Try to login with current wallet address
             const response = await axios.post('http://localhost:5000/api/users/login', {
                 walletAddress: formData.walletAddress,
                 role: formData.role
             });
             
-            // Store token and user data
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('userData', JSON.stringify({
                 id: response.data._id,
@@ -94,21 +115,15 @@ const Login = () => {
                 walletAddress: response.data.walletAddress
             }));
 
-            // Redirect to home page
             navigate('/');
         } catch (error) {
-            if (error.response?.status === 404) {
-                // User not found, show role selection
-                setShowRoleSelection(true);
-            } else {
-                setError(error.response?.data?.message || 'Login failed. Please try again.');
-            }
+            setError(error.response?.data?.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSubmit = async (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
@@ -120,14 +135,12 @@ const Login = () => {
                 return;
             }
 
-            // Register new user using the register endpoint
             const response = await axios.post('http://localhost:5000/api/users/register', {
                 walletAddress: formData.walletAddress,
                 role: formData.role,
                 areaOfInspection: formData.areaOfInspection
             });
             
-            // Store token and user data
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('userData', JSON.stringify({
                 id: response.data._id,
@@ -136,7 +149,6 @@ const Login = () => {
                 areaOfInspection: response.data.areaOfInspection
             }));
 
-            // Redirect to home page
             navigate('/');
         } catch (error) {
             setError(error.response?.data?.message || 'Registration failed. Please try again.');
@@ -150,7 +162,7 @@ const Login = () => {
             <BackgroundEffects />
             <div className="relative w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-xl border border-[#BA6168]/30 shadow-lg shadow-[#BA6168]/20">
                 <h2 className="font-clash-display text-3xl font-bold text-center mb-6">
-                    {showRoleSelection ? 'Complete Registration' : 'Connect Wallet'}
+                    {isNewUser ? 'Complete Registration' : 'Login'}
                 </h2>
                 
                 {error && (
@@ -159,8 +171,18 @@ const Login = () => {
                     </div>
                 )}
 
-                <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                    {showRoleSelection && (
+                <form onSubmit={handleRegister} className="space-y-6">
+                    <div>
+                        <label className="block font-inter font-light mb-2">Wallet Address</label>
+                        <input
+                            type="text"
+                            value={formData.walletAddress}
+                            readOnly
+                            className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter"
+                        />
+                    </div>
+
+                    {isNewUser && (
                         <>
                             <div>
                                 <label className="block font-inter font-light mb-2">Select Role</label>
@@ -169,94 +191,39 @@ const Login = () => {
                                     value={formData.role}
                                     onChange={handleInputChange}
                                     required
-                                    disabled={loading || connectingWallet}
-                                    className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20"
                                 >
                                     <option value="">Select a role</option>
                                     <option value="buyer">Buyer</option>
                                     <option value="seller">Seller</option>
                                     <option value="inspector">Inspector</option>
-                                    <option value="admin">Admin</option>
                                 </select>
                             </div>
 
                             {formData.role === 'inspector' && (
                                 <div>
                                     <label className="block font-inter font-light mb-2">Area of Inspection</label>
-                                    <select
+                                    <input
+                                        type="text"
                                         name="areaOfInspection"
                                         value={formData.areaOfInspection}
                                         onChange={handleInputChange}
                                         required
-                                        disabled={loading || connectingWallet}
-                                        className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <option value="">Select area of inspection</option>
-                                        <option value="residential">Residential</option>
-                                        <option value="commercial">Commercial</option>
-                                        <option value="industrial">Industrial</option>
-                                        <option value="agricultural">Agricultural</option>
-                                        <option value="mixed">Mixed Use</option>
-                                    </select>
+                                        placeholder="Enter your area of inspection"
+                                        className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20"
+                                    />
                                 </div>
                             )}
                         </>
                     )}
 
-                    <div>
-                        <label className="block font-inter font-light mb-2">Wallet Address</label>
-                        <div className="flex gap-3">
-                            <input
-                                type="text"
-                                name="walletAddress"
-                                value={formData.walletAddress}
-                                readOnly
-                                placeholder="Connect your wallet"
-                                required
-                                className="flex-1 p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20"
-                            />
-                            <button
-                                type="button"
-                                onClick={connectWallet}
-                                disabled={loading || walletConnected || !isMetaMaskInstalled || connectingWallet}
-                                className={`px-6 py-3 rounded-lg font-inter font-medium transition-all duration-300
-                                    ${walletConnected 
-                                        ? 'bg-[#BA6168] border border-[#BA6168] text-white' 
-                                        : 'bg-transparent border border-[#BA6168] text-white hover:bg-[#BA6168] disabled:opacity-50 disabled:cursor-not-allowed'}`}
-                            >
-                                {!isMetaMaskInstalled ? 'Install MetaMask' : 
-                                 connectingWallet ? 'Connecting...' :
-                                 walletConnected ? 'Connected' : 'Connect Wallet'}
-                            </button>
-                        </div>
-                        {walletConnected && (
-                            <div className="mt-2 text-sm text-[#BA6168] font-inter">
-                                Connected: {formData.walletAddress.slice(0, 6)}...{formData.walletAddress.slice(-4)}
-                            </div>
-                        )}
-                    </div>
-
-                    {walletConnected && !showRoleSelection && (
-                        <button
-                            type="button"
-                            onClick={handleLogin}
-                            disabled={loading || connectingWallet}
-                            className="w-full py-3 bg-transparent border border-[#BA6168] text-white rounded-lg font-inter font-medium hover:bg-[#BA6168] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Processing...' : 'Login'}
-                        </button>
-                    )}
-
-                    {showRoleSelection && (
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={loading || !formData.role || (formData.role === 'inspector' && !formData.areaOfInspection) || connectingWallet}
-                            className="w-full py-3 bg-transparent border border-[#BA6168] text-white rounded-lg font-inter font-medium hover:bg-[#BA6168] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Processing...' : 'Complete Registration'}
-                        </button>
-                    )}
+                    <button
+                        type="submit"
+                        disabled={loading || (isNewUser && !formData.role) || (isNewUser && formData.role === 'inspector' && !formData.areaOfInspection)}
+                        className="w-full py-3 bg-transparent border border-[#BA6168] text-white rounded-lg font-inter font-medium hover:bg-[#BA6168] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? 'Processing...' : (isNewUser ? 'Complete Registration' : 'Login')}
+                    </button>
                 </form>
             </div>
         </div>

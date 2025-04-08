@@ -8,8 +8,6 @@ contract LandRegistry {
         uint256 area;
         string ownerName;
         string documentHash;
-        uint256 price;
-        bool isListed;
         address owner;
         uint256 timestamp;
     }
@@ -19,8 +17,7 @@ contract LandRegistry {
     
     event LandAdded(string landId, address owner);
     event LandUpdated(string landId, address owner);
-    event LandListed(string landId, uint256 price);
-    event LandUnlisted(string landId);
+    event OwnershipTransferred(string landId, address from, address to);
 
     modifier onlyLandOwner(string memory _landId) {
         require(lands[_landId].owner == msg.sender, "Not the land owner");
@@ -32,8 +29,7 @@ contract LandRegistry {
         string memory _location,
         uint256 _area,
         string memory _ownerName,
-        string memory _documentHash,
-        uint256 _price
+        string memory _documentHash
     ) public {
         require(lands[_landId].owner == address(0), "Land already exists");
         
@@ -43,8 +39,6 @@ contract LandRegistry {
             area: _area,
             ownerName: _ownerName,
             documentHash: _documentHash,
-            price: _price,
-            isListed: false,
             owner: msg.sender,
             timestamp: block.timestamp
         });
@@ -69,19 +63,25 @@ contract LandRegistry {
         emit LandUpdated(_landId, msg.sender);
     }
 
-    function listLand(string memory _landId, uint256 _price) public onlyLandOwner(_landId) {
+    function transferOwnership(string memory _landId, address _newOwner) public onlyLandOwner(_landId) {
+        require(_newOwner != address(0), "Invalid new owner address");
         Land storage land = lands[_landId];
-        land.isListed = true;
-        land.price = _price;
         
-        emit LandListed(_landId, _price);
-    }
+        // Remove from current owner's list
+        string[] storage currentOwnerLands = ownerLands[msg.sender];
+        for (uint256 i = 0; i < currentOwnerLands.length; i++) {
+            if (keccak256(bytes(currentOwnerLands[i])) == keccak256(bytes(_landId))) {
+                currentOwnerLands[i] = currentOwnerLands[currentOwnerLands.length - 1];
+                currentOwnerLands.pop();
+                break;
+            }
+        }
 
-    function unlistLand(string memory _landId) public onlyLandOwner(_landId) {
-        Land storage land = lands[_landId];
-        land.isListed = false;
+        // Add to new owner's list
+        ownerLands[_newOwner].push(_landId);
+        land.owner = _newOwner;
         
-        emit LandUnlisted(_landId);
+        emit OwnershipTransferred(_landId, msg.sender, _newOwner);
     }
 
     function getLandDetails(string memory _landId) public view returns (
@@ -90,8 +90,6 @@ contract LandRegistry {
         uint256 area,
         string memory ownerName,
         string memory documentHash,
-        uint256 price,
-        bool isListed,
         address owner,
         uint256 timestamp
     ) {
@@ -102,8 +100,6 @@ contract LandRegistry {
             land.area,
             land.ownerName,
             land.documentHash,
-            land.price,
-            land.isListed,
             land.owner,
             land.timestamp
         );
@@ -111,24 +107,5 @@ contract LandRegistry {
 
     function getOwnerLands(address _owner) public view returns (string[] memory) {
         return ownerLands[_owner];
-    }
-
-    function getListedLands() public view returns (string[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < ownerLands[msg.sender].length; i++) {
-            if (lands[ownerLands[msg.sender][i]].isListed) {
-                count++;
-            }
-        }
-
-        string[] memory listedLands = new string[](count);
-        uint256 index = 0;
-        for (uint256 i = 0; i < ownerLands[msg.sender].length; i++) {
-            if (lands[ownerLands[msg.sender][i]].isListed) {
-                listedLands[index] = ownerLands[msg.sender][i];
-                index++;
-            }
-        }
-        return listedLands;
     }
 } 

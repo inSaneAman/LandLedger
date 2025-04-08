@@ -1,16 +1,36 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: false
+    },
+    email: {
+        type: String,
+        required: false,
+        unique: true,
+        sparse: true,
+        match: [
+            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+            'Please add a valid email',
+        ]
+    },
+    password: {
+        type: String,
+        required: false,
+        minlength: 6,
+        select: false
+    },
     walletAddress: {
         type: String,
-        required: true,
-        unique: true,
-        trim: true
+        required: [true, 'Please provide a wallet address'],
+        unique: true
     },
     role: {
         type: String,
-        enum: ['buyer', 'seller', 'inspector', 'admin'],
-        required: true
+        enum: ['buyer', 'seller', 'inspector'],
+        required: [true, 'Please specify a role']
     },
     // Fields specific to inspectors
     areaOfInspection: {
@@ -49,6 +69,21 @@ const userSchema = new mongoose.Schema({
     }
 });
 
+// Encrypt password using bcrypt (only if password is modified)
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password') || !this.password) {
+        next();
+        return;
+    }
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Match user entered password to hashed password in database
+userSchema.methods.matchPassword = async function (enteredPassword) {
+    if (!this.password) return false;
+    return await bcrypt.compare(enteredPassword, this.password);
+};
 
 // Update the updatedAt timestamp before saving
 userSchema.pre('save', function(next) {

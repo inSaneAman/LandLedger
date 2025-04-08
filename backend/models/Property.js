@@ -4,62 +4,77 @@ const propertySchema = new mongoose.Schema({
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: true,
+    },
+    ownerWalletAddress: {
+        type: String,
+        required: [true, 'Owner wallet address is required'],
     },
     title: {
         type: String,
-        required: true
+        required: [true, 'Please add a title'],
     },
     description: {
         type: String,
-        required: true
+        required: [true, 'Please add a description'],
     },
     location: {
         type: String,
-        required: true
+        required: [true, 'Please add a location'],
     },
-    size: {
-        type: Number,  // in square feet/units
-        required: true
+    area: {
+        type: Number,
+        required: [true, 'Please add an area'],
     },
     price: {
         type: Number,
-        required: true
+        required: [true, 'Please add a price'],
     },
-    documents: [{
-        name: String,
-        url: String,
-        uploadedAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    status: {
+    propertyType: {
         type: String,
-        enum: ['pending', 'verified', 'rejected'],
-        default: 'pending'
+        enum: ['residential', 'commercial', 'agricultural'],
+        required: [true, 'Please specify property type'],
+    },
+    image: {
+        url: String,
+        publicId: String,
+    },
+    landId: {
+        type: String,
+        required: [true, 'Blockchain Land ID is required'],
+        unique: true,
+    },
+    transactionHash: {
+        type: String,
+        required: [true, 'Blockchain transaction hash is required'],
+        unique: true,
     },
     inspector: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        default: null,
     },
-    inspectionNotes: {
-        type: String
+    status: {
+        type: String,
+        enum: ['pending', 'verified', 'rejected', 'sold'],
+        default: 'pending',
+    },
+    verifiedByInspector: {
+        type: Boolean,
+        default: false,
     },
     verificationDate: {
-        type: Date
-    },
-    blockchainHash: {
-        type: String
-    },
-    createdAt: {
         type: Date,
-        default: Date.now
     },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+    inspectionNotes: {
+        type: String,
+    },
+    isListed: {
+        type: Boolean,
+        default: false,
+    },
+}, {
+    timestamps: true,
 });
 
 module.exports = mongoose.model('Property', propertySchema); 

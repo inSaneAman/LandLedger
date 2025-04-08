@@ -1,102 +1,115 @@
-import { motion, useAnimation } from "framer-motion";
-import { useEffect, useState } from "react";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { useInView } from "react-intersection-observer";
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-import BackgroundEffects from "../components/backgroundEffects";
-import Card from "../components/card";
-import PropertyData from "../helpers/propertyData";
+function PropertyCard({ property }) {
+    // Format price with commas
+    const formattedPrice = property.price ? property.price.toLocaleString('en-IN') : 'N/A';
 
-function Listings() {
-  const [scrollIndex, setScrollIndex] = useState(0);
-  const visibleCards = 3;
-
-  const handleScroll = (direction) => {
-    const maxIndex = PropertyData.length - visibleCards;
-    setScrollIndex((prev) => {
-      if (direction === "left") return Math.max(prev - 1, 0);
-      else return Math.min(prev + 1, maxIndex);
-    });
-  };
-
-  const controls = useAnimation();
-  const { ref, inView } = useInView({
-    triggerOnce: false,
-    threshold: 0.2,
-  });
-
-  useEffect(() => {
-    if (inView) {
-      controls.start("visible");
-    } else {
-      controls.start("hidden");
-    }
-  }, [controls, inView]);
-
-  return (
-    <div
-      ref={ref}
-      className="relative bg-black min-h-screen flex flex-col items-center justify-start overflow-hidden pt-10"
-    >
-      <BackgroundEffects />
-      <div className="text-center p-10">
-        <h1 className="font-clash-display font-bold text-3xl">
-          Featured Listings{" "}
-        </h1>
-        <p className="font-inter font-extralight text-sm max-w-sm mt-3">
-          Below are some featured property listings.
-        </p>
-      </div>
-
-
-      <div className="relative w-[90%] flex items-center justify-center">
-        <button
-          className="absolute left-5 z-10 bg-gray-900/70 text-white p-3 rounded-full hover:bg-gray-700 transition"
-          onClick={() => handleScroll("left")}
-        >
-          <FaChevronLeft size={24} />
-        </button>
-
-        <div className="w-full overflow-hidden">
-          <motion.div
-            className="flex gap-8"
-            animate={{ x: `-${scrollIndex * 50}%` }}
-            transition={{ ease: "easeInOut", duration: 0.8 }}
-          >
-            {PropertyData.map((property, index) => (
-              <motion.div
-                key={property.id}
-                className="w-[25%] flex-shrink-0"
-                initial="hidden"
-                animate={controls}
-                variants={{
-                  hidden: { opacity: 0, y: 50 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: {
-                      duration: 0.6,
-                      ease: "easeOut",
-                      delay: index * 0.2,
-                    },
-                  },
-                }}
-              >
-                <Card property={property} />
-              </motion.div>
-            ))}
-          </motion.div>
+    return (
+        <div className="bg-white/10 rounded-xl overflow-hidden shadow-lg transform transition duration-300 hover:scale-105 flex flex-col">
+            <img 
+                src={property.image?.url || 'https://via.placeholder.com/400x300?text=No+Image'} 
+                alt={property.title} 
+                className="w-full h-48 object-cover"
+            />
+            <div className="p-4 flex flex-col flex-grow">
+                <h3 className="text-lg font-semibold font-clash-display mb-2 truncate">{property.title || 'Untitled Property'}</h3>
+                <p className="text-sm text-gray-400 mb-1"><i className="fas fa-map-marker-alt mr-1"></i> {property.location || 'Unknown Location'}</p>
+                <p className="text-sm text-gray-400 mb-1"><i className="fas fa-vector-square mr-1"></i> {property.area || 'N/A'} sq ft</p>
+                <p className="text-lg font-semibold text-[#BA6168] mb-3">₹ {formattedPrice}</p>
+                
+                <div className="mt-auto pt-3 border-t border-white/10">
+                    <Link 
+                        to={`/property/${property._id}`} 
+                        className="block w-full text-center bg-[#BA6168] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#a54f56] transition ease-in-out duration-300 text-sm"
+                    >
+                        View Details
+                    </Link>
+                </div>
+            </div>
         </div>
+    );
+}
 
-        <button
-          className="absolute right-5 z-10 bg-gray-900/70 text-white p-3 rounded-full hover:bg-gray-700 transition"
-          onClick={() => handleScroll("right")}
-        >
-          <FaChevronRight size={24} />
-        </button>
-      </div>
-    </div>
-  );
+function Listings({ isEmbedded = false }) {
+    const [properties, setProperties] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchProperties = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await axios.get('http://localhost:5000/api/properties');
+                if (Array.isArray(response.data)) {
+                    setProperties(response.data);
+                } else {
+                    console.error("API did not return an array:", response.data);
+                    setProperties([]);
+                    setError('Received invalid data format from server.');
+                    if (!isEmbedded) {
+                        toast.error('Could not load properties: Invalid data format.');
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching properties:", err);
+                setError(err.message || 'Failed to fetch properties.');
+                if (!isEmbedded) {
+                    toast.error(err.response?.data?.message || 'Could not load properties.');
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProperties();
+    }, [isEmbedded]);
+
+    const content = (
+        <>
+            {loading && (
+                <div className="text-center py-10">
+                    <p className="text-xl">Loading properties...</p>
+                </div>
+            )}
+
+            {error && (
+                <div className="text-center py-10 text-red-400">
+                    <p className="text-xl">Error loading properties: {error}</p>
+                </div>
+            )}
+
+            {!loading && !error && properties.length === 0 && (
+                <div className="text-center py-10">
+                    <p className="text-xl text-gray-500">No properties found.</p>
+                </div>
+            )}
+
+            {!loading && !error && properties.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {properties.map((property) => (
+                        <PropertyCard key={property._id} property={property} />
+                    ))}
+                </div>
+            )}
+        </>
+    );
+
+    if (!isEmbedded) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white pt-32 px-4 md:px-8 pb-16">
+                <div className="max-w-7xl mx-auto">
+                    <h1 className="text-4xl font-clash-display font-bold mb-10 text-center">Property Listings</h1>
+                    {content}
+                </div>
+            </div>
+        );
+    }
+
+    return content;
 }
 
 export default Listings;

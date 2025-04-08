@@ -4,104 +4,108 @@ const { cloudinary } = require('../config/cloudinary');
 
 // @desc    Submit a new property
 // @route   POST /api/properties
-// @access  Private
+// @access  Private (Buyer Only - Assuming role check happens in middleware)
 const submitProperty = async (req, res) => {
     try {
-        // Log the entire request for debugging
-        console.log('Request body:', req.body);
-        console.log('Request file:', req.file);
+        // Log the received data for debugging
+        console.log('Request body received:', req.body);
+        console.log('Request file received:', req.file);
 
-        // Extract data from form fields
+        // Extract data from form fields (using names sent by frontend)
         const {
-            landName,
             title,
             description,
             location,
-            size,
+            area, // Changed from size
             price,
-            documents,
-            ownerWalletAddress
+            propertyType,
+            ownerWalletAddress,
+            landId,          // Added
+            transactionHash  // Added
         } = req.body;
 
-        // Validate required fields
-        if (!landName || !title || !description || !location || !size || !price || !ownerWalletAddress) {
+        // Validate required fields sent by the frontend
+        if (!title || !description || !location || !area || !price || !propertyType || !ownerWalletAddress || !landId || !transactionHash) {
             return res.status(400).json({ 
                 message: 'Please provide all required fields',
                 missingFields: {
-                    landName: !landName,
                     title: !title,
                     description: !description,
                     location: !location,
-                    size: !size,
+                    area: !area,
                     price: !price,
-                    ownerWalletAddress: !ownerWalletAddress
+                    propertyType: !propertyType,
+                    ownerWalletAddress: !ownerWalletAddress,
+                    landId: !landId,
+                    transactionHash: !transactionHash
                 }
             });
         }
+        
+        if (!req.file) {
+            return res.status(400).json({ message: 'Property image is required' });
+        }
 
-        // Find inspector based on property location
+        // Find inspector based on property location (assuming this logic remains)
         const inspector = await User.findOne({
             role: 'inspector',
             areaOfInspection: location
         });
 
         if (!inspector) {
-            return res.status(404).json({ message: 'No inspector found for this area' });
+            // Consider if this should be an error or if property can be added without an inspector initially
+            console.warn(`No inspector found for area: ${location}. Property will be added without an assigned inspector.`);
+            // return res.status(404).json({ message: 'No inspector found for this area' });
         }
 
-        // Handle image upload if present
-        let imageData = {};
-        if (req.file) {
-            try {
-                imageData = {
-                    url: req.file.path,
-                    publicId: req.file.filename
-                };
-            } catch (uploadError) {
-                console.error('Error processing image:', uploadError);
-                return res.status(500).json({ 
-                    message: 'Error processing image',
-                    error: process.env.NODE_ENV === 'development' ? uploadError : undefined
-                });
-            }
-        } else {
-            return res.status(400).json({ message: 'Property image is required' });
-        }
+        // Handle image upload (already using cloudinary via middleware)
+        const imageData = {
+            url: req.file.path,
+            publicId: req.file.filename
+        };
 
-        // Parse documents if provided
-        let parsedDocuments = [];
-        if (documents) {
-            try {
-                parsedDocuments = JSON.parse(documents);
-            } catch (parseError) {
-                console.error('Error parsing documents:', parseError);
-                parsedDocuments = [];
-            }
-        }
-
-        const property = await Property.create({
-            owner: req.user._id,
+        const propertyData = {
+            owner: req.user._id, // Assuming user ID is attached by auth middleware
             ownerWalletAddress,
-            landName,
-            title,
+            title,           // Use title
             description,
             location,
-            size: Number(size),
+            area: Number(area), // Use area
             price: Number(price),
-            documents: parsedDocuments,
+            propertyType,    // Added
+            landId,          // Added
+            transactionHash, // Added
             image: imageData,
-            inspector: inspector._id,
-            status: 'pending',
-            verifiedByInspector: false
-        });
+            inspector: inspector ? inspector._id : null, // Handle case where inspector is not found
+            status: 'pending', // Default status
+            isListed: false, // Default isListed status
+            verifiedByInspector: false // Default verification status
+            // Removed: landName, documents
+        };
 
-        // Update inspector's assigned properties
-        inspector.assignedProperties.push(property._id);
-        await inspector.save();
+        // Debug log for the data being sent to the database
+        console.log("Creating property with data:", propertyData);
+
+        const property = await Property.create(propertyData);
+
+        // Update inspector's assigned properties if an inspector was found
+        if (inspector) {
+            inspector.assignedProperties.push(property._id);
+            await inspector.save();
+        }
 
         res.status(201).json(property);
     } catch (error) {
         console.error('Error submitting property:', error);
+        
+        // Handle validation errors specifically
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                message: 'Validation failed', 
+                errors: error.errors 
+            });
+        }
+        
         res.status(500).json({ 
             message: error.message || 'Error submitting property',
             error: process.env.NODE_ENV === 'development' ? error : undefined
@@ -109,15 +113,25 @@ const submitProperty = async (req, res) => {
     }
 };
 
-// @desc    Get all properties for an inspector
+// @desc    Get all properties for an inspector (PENDING verification)
 // @route   GET /api/properties/inspector
 // @access  Private (Inspector only)
 const getInspectorProperties = async (req, res) => {
     try {
-        const properties = await Property.find({ inspector: req.user._id });
-        res.json(properties);
+        // Find properties assigned to the inspector with status 'pending'
+        const properties = await Property.find({ 
+            inspector: req.user._id,
+            status: 'pending' 
+        })
+        .populate('owner', 'walletAddress') // Populate owner wallet address
+        .sort({ createdAt: 1 }); // Sort by oldest first
+
+        res.json(properties || []); // Ensure an array is always returned
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching inspector properties:', error);
+        res.status(500).json({ 
+            message: error.message || 'Error fetching assigned properties' 
+        });
     }
 };
 
@@ -126,28 +140,39 @@ const getInspectorProperties = async (req, res) => {
 // @access  Private (Inspector only)
 const verifyProperty = async (req, res) => {
     try {
-        const property = await Property.findById(req.params.id);
+        const propertyId = req.params.id;
+        console.log(`Received request to verify property ID: ${propertyId}`);
+
+        const property = await Property.findById(propertyId);
 
         if (!property) {
             return res.status(404).json({ message: 'Property not found' });
         }
 
-        if (property.inspector.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Not authorized to verify this property' });
-        }
-
         const { status, inspectionNotes } = req.body;
+        
+        // Validate status
+        if (!['verified', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: 'Invalid status provided.' });
+        }
 
         property.status = status;
         property.inspectionNotes = inspectionNotes;
         property.verificationDate = Date.now();
-        property.verifiedByInspector = true;
+        property.verifiedByInspector = (status === 'verified'); 
+        // Optionally, record which inspector verified it
+        property.inspectorWhoVerified = req.user._id; 
 
         await property.save();
 
         res.json(property);
     } catch (error) {
         console.error('Error verifying property:', error);
+        // Handle CastError if ID format is invalid
+        if (error.name === 'CastError') {
+            console.error(`Invalid ID format received: ${req.params.id}`);
+            return res.status(400).json({ message: 'Invalid property ID format' });
+        }
         res.status(500).json({ 
             message: error.message || 'Error verifying property',
             error: process.env.NODE_ENV === 'development' ? error : undefined
@@ -251,11 +276,148 @@ const updateInspectionStatus = async (req, res) => {
     }
 };
 
+// @desc    List a property (Buyer)
+// @route   POST /api/properties
+// @access  Private/Buyer
+const listProperty = async (req, res) => {
+    try {
+        if (req.user.role !== 'buyer') {
+            return res.status(403).json({ message: 'Only buyers can list properties' });
+        }
+
+        const property = await Property.create({
+            ...req.body,
+            owner: req.user._id,
+            ownerWalletAddress: req.user.walletAddress,
+            isListed: true
+        });
+
+        res.status(201).json({
+            success: true,
+            data: property
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// @desc    Buy a property (Seller)
+// @route   POST /api/properties/:id/buy
+// @access  Private/Seller
+const buyProperty = async (req, res) => {
+    try {
+        if (req.user.role !== 'seller') {
+            return res.status(403).json({ message: 'Only sellers can buy properties' });
+        }
+
+        const property = await Property.findById(req.params.id);
+        if (!property) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+
+        if (!property.isVerified) {
+            return res.status(400).json({ message: 'Property must be verified before purchase' });
+        }
+
+        // Update property ownership
+        property.owner = req.user._id;
+        property.ownerWalletAddress = req.user.walletAddress;
+        property.isListed = false;
+        await property.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Property purchased successfully',
+            data: property
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// @desc    Get all properties (for public listing)
+// @route   GET /api/properties
+// @access  Public
+const getProperties = async (req, res) => {
+    try {
+        // Find all properties, potentially filtering later (e.g., only isListed=true)
+        const properties = await Property.find({})
+            .populate('owner', 'walletAddress') // Optionally populate owner info
+            .sort({ createdAt: -1 }); // Sort by newest first
+        
+        // Ensure we always return an array
+        res.json(properties || []);
+    } catch (error) {
+        console.error('Error fetching properties:', error);
+        res.status(500).json({ 
+            message: error.message || 'Error fetching properties',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
+// @desc    Get a single property by ID
+// @route   GET /api/properties/:id
+// @access  Public
+const getProperty = async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id)
+            .populate('owner', 'walletAddress')
+            .populate('inspector', 'walletAddress'); // Populate inspector details too
+
+        if (!property) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+        res.json(property);
+    } catch (error) {
+        console.error('Error fetching single property:', error);
+        // Handle CastError if ID format is invalid
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Invalid property ID format' });
+        }
+        res.status(500).json({ 
+            message: error.message || 'Error fetching property',
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
+// @desc    Get ALL properties pending verification
+// @route   GET /api/properties/pending
+// @access  Private (Inspector Only)
+const getAllPendingProperties = async (req, res) => {
+    try {
+        // Find all properties with status 'pending'
+        const properties = await Property.find({ status: 'pending' })
+            .populate('owner', 'walletAddress') 
+            .populate('inspector', 'walletAddress') // Populate assigned inspector wallet address too
+            .sort({ createdAt: 1 }); // Sort by oldest first
+
+        res.json(properties || []); // Ensure an array is always returned
+    } catch (error) {
+        console.error('Error fetching all pending properties:', error);
+        res.status(500).json({ 
+            message: error.message || 'Error fetching pending properties' 
+        });
+    }
+};
+
 module.exports = {
     submitProperty,
     getInspectorProperties,
+    getAllPendingProperties,
     verifyProperty,
     getUserProperties,
     getInspectorPropertiesByWallet,
-    updateInspectionStatus
+    updateInspectionStatus,
+    listProperty,
+    buyProperty,
+    getProperties,
+    getProperty
 }; 

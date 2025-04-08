@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const { connectDB, checkConnection } = require('./config/db');
 const propertyRoutes = require('./routes/property');
 const userRoutes = require('./routes/user');
+const paymentRoutes = require('./routes/payment');
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/properties', propertyRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

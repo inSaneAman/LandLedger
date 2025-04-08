@@ -21,14 +21,22 @@ export const getLandContract = (provider) => {
 export const addLand = async (signer, landData) => {
   try {
     const contract = getLandContract(signer);
+    
+    // Convert area and price to Wei format for blockchain storage
+    const areaInWei = ethers.utils.parseUnits(landData.area.toString(), 'ether');
+    const priceInWei = ethers.utils.parseUnits(landData.price.toString(), 'ether');
+    
+    // Call the contract's addLand function with the correct parameters
     const tx = await contract.addLand(
       landData.landId,
       landData.location,
-      ethers.utils.parseUnits(landData.area.toString(), 'ether'),
+      areaInWei,
       landData.ownerName,
       landData.documentHash,
-      ethers.utils.parseUnits(landData.price.toString(), 'ether')
+      priceInWei
     );
+
+    // Wait for the transaction to be mined
     await tx.wait();
     return tx.hash;
   } catch (error) {

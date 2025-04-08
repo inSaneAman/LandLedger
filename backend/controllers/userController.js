@@ -57,19 +57,13 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Wallet address is required' });
         }
 
-        // Validate role
-        if (!['buyer', 'seller', 'inspector', 'admin'].includes(role)) {
-            return res.status(400).json({ message: 'Invalid role' });
+        if (!role) {
+            return res.status(400).json({ message: 'Role is required' });
         }
 
-        // Validate areaOfInspection for inspectors
-        if (role === 'inspector') {
-            if (!areaOfInspection) {
-                return res.status(400).json({ message: 'Area of inspection is required for inspectors' });
-            }
-            if (!['residential', 'commercial', 'industrial', 'agricultural', 'mixed'].includes(areaOfInspection)) {
-                return res.status(400).json({ message: 'Invalid area of inspection' });
-            }
+        // Validate role
+        if (!['buyer', 'seller', 'inspector'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
         }
 
         // Check if user already exists
@@ -79,14 +73,11 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Wallet address already registered' });
         }
         
-        // Create user object based on role
+        // Create user object
         const userData = {
             walletAddress,
             role,
-            areaOfInspection: role === 'inspector' ? areaOfInspection : null,
-            status: 'active',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            areaOfInspection: role === 'inspector' ? areaOfInspection : undefined
         };
 
         console.log('Attempting to create user with data:', userData);
@@ -104,16 +95,11 @@ const registerUser = async (req, res) => {
             walletAddress: user.walletAddress,
             role: user.role,
             status: user.status,
-            lastLogin: user.lastLogin,
             areaOfInspection: user.areaOfInspection,
             token
         });
     } catch (error) {
-        console.error('Registration error details:', {
-            message: error.message,
-            code: error.code,
-            name: error.name
-        });
+        console.error('Registration error:', error);
         
         // Handle specific MongoDB errors
         if (error.code === 11000) {
@@ -213,10 +199,41 @@ const updateWalletAddress = async (req, res) => {
     }
 };
 
+// @desc    Check if wallet exists and return user data
+// @route   GET /api/users/wallet/:address
+// @access  Public
+const checkWalletExists = async (req, res) => {
+    try {
+        const walletAddress = req.params.address;
+        const user = await User.findOne({ walletAddress });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Generate token for existing user
+        const token = generateToken(user._id);
+
+        res.json({
+            _id: user._id,
+            walletAddress: user.walletAddress,
+            role: user.role,
+            status: user.status,
+            token
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message 
+        });
+    }
+};
+
 module.exports = {
     loginUser,
     registerUser,
     getUserProfile,
     updateUserRole,
-    updateWalletAddress
+    updateWalletAddress,
+    checkWalletExists
 }; 

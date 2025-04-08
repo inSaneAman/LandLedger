@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { connectWallet, getStoredWalletAddress, setupWalletListeners, disconnectWallet } from "../utils/web3";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function NavigationBar() {
   const { scrollYProgress } = useScroll();
@@ -41,13 +42,75 @@ function NavigationBar() {
   const handleConnectWallet = async () => {
     try {
       setIsConnecting(true);
-      const walletData = await connectWallet();
-      setWalletAddress(walletData.address);
-      toast.success("Wallet connected successfully!");
+      
+      // Check if MetaMask is installed
+      if (!window.ethereum) {
+        toast.error("Please install MetaMask to connect your wallet");
+        return;
+      }
+
+      // Request account access and open MetaMask popup
+      const accounts = await window.ethereum.request({ 
+        method: 'wallet_requestPermissions',
+        params: [{
+          eth_accounts: {}
+        }]
+      });
+
+      if (!accounts || accounts.length === 0) {
+        toast.error("No account selected");
+        return;
+      }
+
+      // Get the current account after permission is granted
+      const currentAccounts = await window.ethereum.request({ 
+        method: 'eth_accounts' 
+      });
+
+      if (currentAccounts.length === 0) {
+        toast.error("No account available");
+        return;
+      }
+
+      const selectedAccount = currentAccounts[0];
+      
+      try {
+        // Check if user exists in database
+        const response = await axios.get(`http://localhost:5000/api/users/wallet/${selectedAccount}`);
+        
+        if (response.data) {
+          // User exists, update UI and store data
+          setWalletAddress(selectedAccount);
+          setUserRole(response.data.role);
+          localStorage.setItem('walletAddress', selectedAccount);
+          localStorage.setItem('userData', JSON.stringify({
+            id: response.data._id,
+            role: response.data.role,
+            walletAddress: selectedAccount
+          }));
+          localStorage.setItem('token', response.data.token);
+          toast.success("Wallet connected successfully!");
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          // User not found, navigate to role selection
+          setWalletAddress(selectedAccount);
+          localStorage.setItem('walletAddress', selectedAccount);
+          navigate('/auth', { 
+            state: { 
+              walletAddress: selectedAccount,
+              isNewUser: true 
+            } 
+          });
+        } else {
+          console.error("Error checking user:", error);
+          toast.error("Failed to verify user. Please try again.");
+        }
+      }
     } catch (error) {
       console.error("Failed to connect wallet:", error);
-      if (error.message === 'Please install MetaMask to use this feature') {
-        toast.error("Please install MetaMask to connect your wallet");
+      if (error.code === 4001) {
+        toast.error("Please select an account in MetaMask");
       } else {
         toast.error("Failed to connect wallet. Please try again.");
       }
@@ -58,14 +121,18 @@ function NavigationBar() {
 
   const handleDisconnectWallet = async () => {
     try {
-      if (window.ethereum) {
-        // Request account access to open MetaMask
-        await window.ethereum.request({ 
-          method: 'eth_requestAccounts' 
-        });
-      }
-      disconnectWallet();
+      // Remove wallet address from localStorage
+      localStorage.removeItem('walletAddress');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('token');
+      
+      // Reset state
       setWalletAddress("");
+      setUserRole("");
+      
+      // Reload the page to reset all states
+      window.location.reload();
+      
       toast.success("Wallet disconnected successfully!");
     } catch (error) {
       console.error("Error during disconnect:", error);
@@ -152,9 +219,9 @@ function NavigationBar() {
       </div>
 
       <div className="flex items-center gap-x-6">
-        <button className="p-2 rounded-full hover:bg-white/10 transition duration-300">
+        {/* <button className="p-2 rounded-full hover:bg-white/10 transition duration-300">
           <TfiSearch className="text-white text-2xl" />
-        </button>
+        </button> */}
 
         {userRole === "inspector" && (
           <button
@@ -164,21 +231,34 @@ function NavigationBar() {
             Land Register
           </button>
         )}
-        <button
-          onClick={handleAddProperty}
-          className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
-        >
-          Add Property
-        </button>
-        <span className="text-white font-medium">
-          {formatAddress(walletAddress)}
-        </span>
-        <button 
-          onClick={handleDisconnectWallet}
-          className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
-        >
-          Disconnect
-        </button>
+        {(userRole === "seller" || userRole === "inspector") && (
+          <button
+            onClick={handleAddProperty}
+            className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+          >
+            Add Property
+          </button>
+        )}
+        {walletAddress ? (
+          <>
+            <span className="text-white font-medium">
+              {formatAddress(walletAddress)}
+            </span>
+            <button 
+              onClick={handleDisconnectWallet}
+              className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+            >
+              Disconnect
+            </button>
+          </>
+        ) : (
+          <button 
+            onClick={handleConnectWallet}
+            className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+          >
+            Connect
+          </button>
+        )}
       </div>
     </motion.div>
   );
