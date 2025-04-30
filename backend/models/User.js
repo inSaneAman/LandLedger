@@ -50,6 +50,23 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Property'
     }],
+    image: {
+        url: String,
+        publicId: String,
+        
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationDate: {
+        type: Date,
+        default: null
+    },
+    verificationNotes: {
+        type: String,
+        default: null
+    },
     status: {
         type: String,
         enum: ['active', 'inactive', 'suspended'],

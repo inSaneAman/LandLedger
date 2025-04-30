@@ -19,6 +19,8 @@ const Login = () => {
     const [connectingWallet, setConnectingWallet] = useState(false);
     const [showRoleSelection, setShowRoleSelection] = useState(false);
     const [isNewUser, setIsNewUser] = useState(location.state?.isNewUser || false);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         // Check if MetaMask is installed
@@ -123,6 +125,22 @@ const Login = () => {
         }
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                toast.error("Image size should be less than 10MB");
+                return;
+            }
+            setSelectedImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleRegister = async (e) => {
         e.preventDefault();
         setError('');
@@ -135,23 +153,70 @@ const Login = () => {
                 return;
             }
 
-            const response = await axios.post('http://localhost:5000/api/users/register', {
-                walletAddress: formData.walletAddress,
-                role: formData.role,
-                areaOfInspection: formData.areaOfInspection
+            // Create FormData instance
+            const formDataToSend = new FormData();
+            console.log("he", formData.walletAddress);
+            
+            // Append all form fields
+            formDataToSend.append('walletAddress', formData.walletAddress );
+            formDataToSend.append('role', formData.role );
+            
+            // Only append areaOfInspection if it exists and role is inspector
+            if (formData.role === 'inspector' && formData.areaOfInspection) {
+                formDataToSend.append('areaOfInspection', formData.areaOfInspection);
+            }
+
+            // Append image if selected
+            if (selectedImage) {
+                formDataToSend.append('image', selectedImage);
+            }
+
+            // Log the FormData contents for debugging
+            console.log('FormData contents:');
+            for (let [key, value] of formDataToSend.entries()) {
+                console.log(`${key}:`, value);
+            }
+
+            // Get the token from localStorage
+            const token = localStorage.getItem('token');
+
+            const response = await axios.post('http://localhost:5000/api/users/register', formDataToSend, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': token ? `Bearer ${token}` : undefined
+                }
             });
+
+            if (!response.data) {
+                throw new Error('No response data received');
+            }
             
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('userData', JSON.stringify({
                 id: response.data._id,
                 role: response.data.role,
                 walletAddress: response.data.walletAddress,
-                areaOfInspection: response.data.areaOfInspection
+                areaOfInspection: response.data.areaOfInspection,
+                profileImage: response.data.profileImage
             }));
 
             navigate('/');
         } catch (error) {
-            setError(error.response?.data?.message || 'Registration failed. Please try again.');
+            console.error('Registration error:', error);
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                console.error('Error response:', error.response.data);
+                setError(error.response.data.message || 'Registration failed. Please try again.');
+            } else if (error.request) {
+                // The request was made but no response was received
+                console.error('Error request:', error.request);
+                setError('No response from server. Please try again.');
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                console.error('Error message:', error.message);
+                setError('An error occurred. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -191,12 +256,12 @@ const Login = () => {
                                     value={formData.role}
                                     onChange={handleInputChange}
                                     required
-                                    className="w-full p-3 bg-white/10 border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20"
+                                    className="w-full p-3 bg-black border border-[#BA6168]/30 rounded-lg text-white font-inter focus:outline-none focus:border-[#BA6168] focus:ring-2 focus:ring-[#BA6168]/20"
                                 >
-                                    <option value="">Select a role</option>
-                                    <option value="buyer">Buyer</option>
-                                    <option value="seller">Seller</option>
-                                    <option value="inspector">Inspector</option>
+                                    <option value="" className="bg-black text-white">Select a role</option>
+                                    <option value="buyer" className="bg-black text-white">Buyer</option>
+                                    <option value="seller" className="bg-black text-white">Seller</option>
+                                    <option value="inspector" className="bg-black text-white">Inspector</option>
                                 </select>
                             </div>
 
@@ -214,6 +279,59 @@ const Login = () => {
                                     />
                                 </div>
                             )}
+
+                            {/* Profile Image Upload */}
+                            <div>
+                                <label className="block font-inter font-light mb-2">Profile Image</label>
+                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-white/20 border-dashed rounded-lg">
+                                    <div className="space-y-1 text-center">
+                                        {imagePreview ? (
+                                            <div className="mb-4">
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Profile preview"
+                                                    className="mx-auto h-32 w-32 rounded-full object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <svg
+                                                className="mx-auto h-12 w-12 text-gray-400"
+                                                stroke="currentColor"
+                                                fill="none"
+                                                viewBox="0 0 48 48"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                                    strokeWidth={2}
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                        )}
+                                        <div className="flex text-sm text-gray-400">
+                                            <label
+                                                htmlFor="profile-image-upload"
+                                                className="relative cursor-pointer bg-white/5 rounded-md font-medium text-white hover:text-[#BA6168] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-[#BA6168]"
+                                            >
+                                                <span>Upload a file</span>
+                                                <input
+                                                    id="profile-image-upload"
+                                                    name="profile-image-upload"
+                                                    type="file"
+                                                    className="sr-only"
+                                                    accept="image/*"
+                                                    onChange={handleImageChange}
+                                                />
+                                            </label>
+                                            <p className="pl-1">or drag and drop</p>
+                                        </div>
+                                        <p className="text-xs text-gray-400">
+                                            PNG, JPG, GIF up to 10MB
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </>
                     )}
 

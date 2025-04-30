@@ -6,14 +6,19 @@ const {
     getUserProfile,
     updateUserRole,
     updateWalletAddress,
-    checkWalletExists
+    checkWalletExists,
+    getUsers,
+    updateUserVerification
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
+const { upload } = require('../config/cloudinary');
 
 // Public routes
 router.post('/login', loginUser);
-router.post('/register', registerUser);
+router.post('/register', upload.single('image'), registerUser);
 router.get('/wallet/:address', checkWalletExists);
+router.get('/allusers',getUsers)
+router.put('/verification',updateUserVerification)
 
 // Protected routes
 router.get('/profile', protect, getUserProfile);

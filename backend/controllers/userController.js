@@ -49,8 +49,19 @@ const loginUser = async (req, res) => {
 // @access  Public
 const registerUser = async (req, res) => {
     try {
+        // Log the entire request to see the structure
+        console.log("Request body:", req.body);
+        console.log("Request file:", req.file);
+
+        // Extract form data fields directly from req.body
         const { walletAddress, role, areaOfInspection } = req.body;
-        console.log('Registration attempt with data:', { walletAddress, role, areaOfInspection });
+
+        // Log the extracted data
+        console.log('Extracted form data:', {
+            walletAddress,
+            role,
+            areaOfInspection
+        });
 
         // Validate required fields
         if (!walletAddress) {
@@ -72,12 +83,28 @@ const registerUser = async (req, res) => {
             console.log('User already exists with wallet:', walletAddress);
             return res.status(400).json({ message: 'Wallet address already registered' });
         }
+
+        // Handle image upload
+        let imageData = null;
+        if (req.file) {
+            imageData = {
+                url: req.file.path,
+                publicId: req.file.filename
+            };
+            console.log('Image uploaded successfully:', imageData);
+        } else {
+            console.log('No image uploaded');
+        }
         
         // Create user object
         const userData = {
             walletAddress,
             role,
-            areaOfInspection: role === 'inspector' ? areaOfInspection : undefined
+            areaOfInspection: role === 'inspector' ? areaOfInspection : undefined,
+            image: imageData,
+            isVerified: false, // Default to unverified
+            verificationDate: null,
+            verificationNotes: null
         };
 
         console.log('Attempting to create user with data:', userData);
@@ -96,6 +123,10 @@ const registerUser = async (req, res) => {
             role: user.role,
             status: user.status,
             areaOfInspection: user.areaOfInspection,
+            image: user.image,
+            isVerified: user.isVerified,
+            verificationDate: user.verificationDate,
+            verificationNotes: user.verificationNotes,
             token
         });
     } catch (error) {
@@ -229,11 +260,91 @@ const checkWalletExists = async (req, res) => {
     }
 };
 
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private/Admin
+const getUsers = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const users = await User.find({})
+            .select('-password') // Exclude password field
+            .skip(skip)
+            .limit(limit);
+
+        const totalUsers = await User.countDocuments();
+
+        res.json({
+            users,
+            page,
+            pages: Math.ceil(totalUsers / limit),
+            total: totalUsers
+        });
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message 
+        });
+    }
+};
+
+// @desc    Update user verification status
+// @route   PUT /api/users/:id/verify
+// @access  Private/Admin
+const updateUserVerification = async (req, res) => {
+    try {
+        const { isVerified,walletAddress } = req.body;
+        console.log(req.body)
+
+        // Validate isVerified parameter
+        if (typeof isVerified !== 'boolean') {
+            return res.status(400).json({ 
+                message: 'Invalid verification status. Must be a boolean value.' 
+            });
+        }
+
+        // Find user by wallet address
+        const user = await User.findOne({ walletAddress });
+
+        if (!user) {
+            return res.status(404).json({ 
+                message: 'User not found with the provided wallet address.' 
+            });
+        }
+
+        // Update verification status and notes
+        user.isVerified = isVerified;
+        user.verificationDate = isVerified ? new Date() : null;
+
+        await user.save();
+
+        res.json({
+            _id: user._id,
+            walletAddress: user.walletAddress,
+            role: user.role,
+            isVerified: user.isVerified,
+            verificationDate: user.verificationDate,
+            verificationNotes: user.verificationNotes
+        });
+    } catch (error) {
+        console.error('Update verification error:', error);
+        res.status(500).json({ 
+            message: 'Failed to update user verification status.', 
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 module.exports = {
     loginUser,
     registerUser,
     getUserProfile,
     updateUserRole,
     updateWalletAddress,
-    checkWalletExists
+    checkWalletExists,
+    getUsers,
+    updateUserVerification
 }; 

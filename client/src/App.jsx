@@ -8,8 +8,10 @@ import WhyChooseUs from "./pages/WhyChooseUs";
 import AddProperty from "./pages/AddProperty";
 import LandRegister from "./components/LandRegister";
 import PropertyDetail from './pages/PropertyDetail';
+import AdminDashboard from './pages/AdminDashboard';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
+import Login from "./components/auth/Login";
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
           <Route path="/add-property" element={<AddProperty />} />
           <Route path="/land-register" element={<LandRegister />} />
           <Route path="/property/:id" element={<PropertyDetail />} />
+          <Route path='/auth' element={<Login/>}/>
+          <Route path='/admin' element={<AdminDashboard />} />
         </Routes>
         <Toaster position="bottom-right" />
       </div>

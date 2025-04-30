@@ -239,6 +239,14 @@ function NavigationBar() {
             Add Property
           </button>
         )}
+        {userRole === "admin" && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="border border-white text-white px-6 py-2 rounded-3xl font-medium hover:bg-[#BA6168] transition ease-in-out duration-300"
+          >
+            Admin Dashboard
+          </button>
+        )}
         {walletAddress ? (
           <>
             <span className="text-white font-medium">
