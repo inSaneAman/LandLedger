@@ -1,0 +1,1 @@
+router.get('/role/:walletAddress', userController.getUserRole); 
